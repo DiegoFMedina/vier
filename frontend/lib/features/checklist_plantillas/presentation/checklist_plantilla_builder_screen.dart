@@ -67,13 +67,16 @@ class ChecklistPlantillaBuilderScreen extends ConsumerStatefulWidget {
 
 class _ChecklistPlantillaBuilderScreenState extends ConsumerState<ChecklistPlantillaBuilderScreen> {
   List<PlantillaSeccion>? _secciones;
+  List<String>? _rolesFirma;
   bool _guardando = false;
   bool _subiendoLogo = false;
 
   List<PlantillaSeccion> get secciones => _secciones!;
+  List<String> get rolesFirma => _rolesFirma!;
 
   void _sync(ChecklistPlantilla plantilla) {
     _secciones ??= List.of(plantilla.secciones);
+    _rolesFirma ??= plantilla.rolesFirma.map((r) => r.nombre).toList();
   }
 
   Future<void> _guardar() async {
@@ -81,7 +84,7 @@ class _ChecklistPlantillaBuilderScreenState extends ConsumerState<ChecklistPlant
     try {
       await ref
           .read(checklistPlantillaDetalleProvider(widget.plantillaId).notifier)
-          .guardarEstructura(secciones);
+          .guardarEstructura(secciones, rolesFirma: rolesFirma);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Plantilla guardada')),
@@ -198,6 +201,27 @@ class _ChecklistPlantillaBuilderScreenState extends ConsumerState<ChecklistPlant
     _actualizarSeccion(seccionIndex, seccion.copyWith(grupos: grupos));
   }
 
+  Future<void> _agregarRol() async {
+    final nombre = await _promptText(context, titulo: 'Nuevo rol de firma (ej. "Jefe de Proyecto")');
+    if (nombre == null || nombre.isEmpty) return;
+    setState(() => _rolesFirma = [...rolesFirma, nombre]);
+  }
+
+  Future<void> _editarRol(int index) async {
+    final nombre = await _promptText(context, titulo: 'Editar rol', initial: rolesFirma[index]);
+    if (nombre == null || nombre.isEmpty) return;
+    setState(() {
+      final copia = List.of(rolesFirma);
+      copia[index] = nombre;
+      _rolesFirma = copia;
+    });
+  }
+
+  Future<void> _eliminarRol(int index) async {
+    if (!await _confirmar(context, '¿Eliminar este rol de firma?')) return;
+    setState(() => _rolesFirma = List.of(rolesFirma)..removeAt(index));
+  }
+
   Future<void> _subirLogo(String tipo) async {
     try {
       final picker = ImagePicker();
@@ -258,6 +282,32 @@ class _ChecklistPlantillaBuilderScreenState extends ConsumerState<ChecklistPlant
                       loading: _subiendoLogo,
                       onTap: () => _subirLogo('cliente'),
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text('Roles de firma', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Quién debe firmar el documento (ej. Preparó, Revisó, Aprobó).',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (var i = 0; i < rolesFirma.length; i++)
+                    InputChip(
+                      label: Text(rolesFirma[i]),
+                      onPressed: () => _editarRol(i),
+                      onDeleted: () => _eliminarRol(i),
+                      deleteIconColor: AppColors.fucsia,
+                    ),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 18, color: AppColors.violetPrimary),
+                    label: const Text('Agregar rol'),
+                    onPressed: _agregarRol,
                   ),
                 ],
               ),

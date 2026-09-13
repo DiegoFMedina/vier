@@ -16,6 +16,7 @@ const INCLUDE_ESTRUCTURA = {
     items: { where: { grupoId: null }, orderBy: ORDEN_SECCION },
   },
 };
+const ROLES_FIRMA_DEFECTO = ['Preparó', 'Revisó', 'Aprobó'];
 
 @Injectable()
 export class ChecklistPlantillasService {
@@ -34,7 +35,10 @@ export class ChecklistPlantillasService {
   async findOne(id: string) {
     const plantilla = await this.prisma.checklistPlantilla.findUnique({
       where: { id },
-      include: { secciones: INCLUDE_ESTRUCTURA },
+      include: {
+        secciones: INCLUDE_ESTRUCTURA,
+        rolesFirma: { orderBy: ORDEN_SECCION },
+      },
     });
     if (!plantilla) {
       throw new NotFoundException('Plantilla no encontrada');
@@ -63,13 +67,18 @@ export class ChecklistPlantillasService {
             items: g.items.map((i) => ({ descripcion: i.descripcion, requiereObservacion: i.requiereObservacion })),
           })),
         })),
+        rolesFirma: origen.rolesFirma.map((r) => r.nombre),
       });
       return this.findOne(creada.id);
     }
 
-    return this.prisma.checklistPlantilla.create({
+    const creada = await this.prisma.checklistPlantilla.create({
       data: { nombre: dto.nombre, descripcion: dto.descripcion, creadoPorId: userId },
     });
+    await this.prisma.checklistPlantillaRolFirma.createMany({
+      data: ROLES_FIRMA_DEFECTO.map((nombre, orden) => ({ plantillaId: creada.id, nombre, orden })),
+    });
+    return this.findOne(creada.id);
   }
 
   async update(id: string, dto: UpdatePlantillaDto) {
@@ -126,6 +135,13 @@ export class ChecklistPlantillasService {
             });
           }
         }
+      }
+
+      if (dto.rolesFirma) {
+        await tx.checklistPlantillaRolFirma.deleteMany({ where: { plantillaId: id } });
+        await tx.checklistPlantillaRolFirma.createMany({
+          data: dto.rolesFirma.map((nombre, orden) => ({ plantillaId: id, nombre, orden })),
+        });
       }
     });
 

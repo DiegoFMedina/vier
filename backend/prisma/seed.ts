@@ -78,6 +78,14 @@ async function seedChecklistPorDefecto(creadoPorId: string) {
     },
   });
 
+  await prisma.checklistPlantillaRolFirma.createMany({
+    data: ['Preparó', 'Revisó', 'Aprobó'].map((nombre, orden) => ({
+      plantillaId: plantilla.id,
+      nombre,
+      orden,
+    })),
+  });
+
   for (const [seccionIndex, seccion] of CHECKLIST_EFE_SECCIONES.entries()) {
     const seccionCreada = await prisma.checklistPlantillaSeccion.create({
       data: {

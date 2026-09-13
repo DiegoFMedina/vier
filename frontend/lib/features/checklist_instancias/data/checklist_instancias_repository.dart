@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../models/checklist_instancia.dart';
+import '../models/instancia_firma.dart';
 
 class ChecklistInstanciasRepository {
   ChecklistInstanciasRepository(this._dio);
@@ -38,6 +39,44 @@ class ChecklistInstanciasRepository {
 
   Future<void> agregarRevision(String instanciaId, Map<String, dynamic> data) async {
     await _dio.post('/checklists/$instanciaId/revisiones', data: data);
+  }
+
+  Future<void> actualizarFirma(
+    String instanciaId,
+    String firmaId, {
+    String? nombrePersona,
+    String? fecha,
+  }) async {
+    await _dio.patch('/checklists/$instanciaId/firmas/$firmaId', data: {
+      if (nombrePersona != null) 'nombrePersona': nombrePersona,
+      if (fecha != null) 'fecha': fecha,
+    });
+  }
+
+  Future<void> firmarConArchivo(
+    String instanciaId,
+    String firmaId, {
+    required TipoFirma tipo,
+    required List<int> bytes,
+    required String fileName,
+    String? guardarComo,
+  }) async {
+    final formData = FormData.fromMap({
+      'tipo': tipo.toJson(),
+      if (guardarComo != null) 'guardarComo': guardarComo,
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+    });
+    await _dio.post('/checklists/$instanciaId/firmas/$firmaId/imagen', data: formData);
+  }
+
+  Future<void> firmarConGuardada(String instanciaId, String firmaId, String firmaGuardadaId) async {
+    await _dio.post('/checklists/$instanciaId/firmas/$firmaId/usar-guardada', data: {
+      'firmaGuardadaId': firmaGuardadaId,
+    });
+  }
+
+  Future<void> borrarFirma(String instanciaId, String firmaId) async {
+    await _dio.delete('/checklists/$instanciaId/firmas/$firmaId/imagen');
   }
 
   Future<void> subirLogo(String instanciaId, String tipo, List<int> bytes, String fileName) async {

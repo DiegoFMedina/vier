@@ -23,6 +23,8 @@ import { CreateInstanciaDto } from './dto/create-instancia.dto';
 import { UpdateInstanciaDto } from './dto/update-instancia.dto';
 import { ResponderItemDto } from './dto/responder-item.dto';
 import { CreateRevisionDto } from './dto/create-revision.dto';
+import { UpdateFirmaDto } from './dto/update-firma.dto';
+import { FirmarConGuardadaDto, FirmarDto } from './dto/firmar.dto';
 
 enum LogoTipo {
   empresa = 'empresa',
@@ -73,6 +75,42 @@ export class ChecklistInstanciasController {
   @Post('checklists/:id/revisiones')
   addRevision(@Param('id') id: string, @Body() dto: CreateRevisionDto) {
     return this.service.addRevision(id, dto);
+  }
+
+  @Patch('checklists/:id/firmas/:firmaId')
+  actualizarFirma(
+    @Param('id') id: string,
+    @Param('firmaId') firmaId: string,
+    @Body() dto: UpdateFirmaDto,
+  ) {
+    return this.service.actualizarFirma(id, firmaId, dto);
+  }
+
+  @Post('checklists/:id/firmas/:firmaId/imagen')
+  @UseInterceptors(FileInterceptor('file'))
+  firmarConArchivo(
+    @Param('id') id: string,
+    @Param('firmaId') firmaId: string,
+    @Body() dto: FirmarDto,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.service.firmarConArchivo(id, firmaId, dto.tipo, file, dto.guardarComo, user.userId);
+  }
+
+  @Post('checklists/:id/firmas/:firmaId/usar-guardada')
+  firmarConGuardada(
+    @Param('id') id: string,
+    @Param('firmaId') firmaId: string,
+    @Body() dto: FirmarConGuardadaDto,
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.service.firmarConGuardada(id, firmaId, dto.firmaGuardadaId, user.userId);
+  }
+
+  @Delete('checklists/:id/firmas/:firmaId/imagen')
+  borrarFirma(@Param('id') id: string, @Param('firmaId') firmaId: string) {
+    return this.service.borrarFirma(id, firmaId);
   }
 
   @Post('checklists/:id/logo')

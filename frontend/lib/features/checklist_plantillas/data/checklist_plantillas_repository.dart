@@ -41,9 +41,14 @@ class ChecklistPlantillasRepository {
     return ChecklistPlantilla.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<ChecklistPlantilla> reemplazarEstructura(String id, List<PlantillaSeccion> secciones) async {
+  Future<ChecklistPlantilla> reemplazarEstructura(
+    String id,
+    List<PlantillaSeccion> secciones, {
+    List<String>? rolesFirma,
+  }) async {
     final response = await _dio.put('/checklist-plantillas/$id/estructura', data: {
       'secciones': secciones.map((s) => s.toJson()).toList(),
+      if (rolesFirma != null) 'rolesFirma': rolesFirma,
     });
     return ChecklistPlantilla.fromJson(response.data as Map<String, dynamic>);
   }

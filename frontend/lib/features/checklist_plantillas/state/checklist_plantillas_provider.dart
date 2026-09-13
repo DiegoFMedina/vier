@@ -68,8 +68,10 @@ class ChecklistPlantillaDetalleNotifier extends AsyncNotifier<ChecklistPlantilla
     await refresh();
   }
 
-  Future<void> guardarEstructura(List<PlantillaSeccion> secciones) async {
-    await ref.read(checklistPlantillasRepositoryProvider).reemplazarEstructura(plantillaId, secciones);
+  Future<void> guardarEstructura(List<PlantillaSeccion> secciones, {List<String>? rolesFirma}) async {
+    await ref
+        .read(checklistPlantillasRepositoryProvider)
+        .reemplazarEstructura(plantillaId, secciones, rolesFirma: rolesFirma);
     await refresh();
   }
 

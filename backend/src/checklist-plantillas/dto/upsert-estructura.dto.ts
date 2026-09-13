@@ -46,4 +46,10 @@ export class UpsertEstructuraDto {
   @ValidateNested({ each: true })
   @Type(() => PlantillaSeccionDto)
   secciones: PlantillaSeccionDto[];
+
+  /** Roles de aprobación/firma configurables (ej. "Preparó", "Revisó"). */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  rolesFirma?: string[];
 }

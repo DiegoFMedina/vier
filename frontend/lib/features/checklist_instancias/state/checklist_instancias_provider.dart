@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
+import '../../firmas/state/firmas_provider.dart';
 import '../data/checklist_instancias_repository.dart';
 import '../models/checklist_instancia.dart';
+import '../models/instancia_firma.dart';
 
 final checklistInstanciasRepositoryProvider = Provider<ChecklistInstanciasRepository>((ref) {
   return ChecklistInstanciasRepository(ref.watch(apiDioProvider));
@@ -88,6 +90,47 @@ class ChecklistInstanciaDetalleNotifier extends AsyncNotifier<ChecklistInstancia
 
   Future<void> subirLogo(String tipo, List<int> bytes, String fileName) async {
     await ref.read(checklistInstanciasRepositoryProvider).subirLogo(instanciaId, tipo, bytes, fileName);
+    await refresh();
+  }
+
+  Future<void> actualizarFirma(String firmaId, {String? nombrePersona, String? fecha}) async {
+    await ref.read(checklistInstanciasRepositoryProvider).actualizarFirma(
+          instanciaId,
+          firmaId,
+          nombrePersona: nombrePersona,
+          fecha: fecha,
+        );
+    await refresh();
+  }
+
+  Future<void> firmarConArchivo(
+    String firmaId, {
+    required TipoFirma tipo,
+    required List<int> bytes,
+    required String fileName,
+    String? guardarComo,
+  }) async {
+    await ref.read(checklistInstanciasRepositoryProvider).firmarConArchivo(
+          instanciaId,
+          firmaId,
+          tipo: tipo,
+          bytes: bytes,
+          fileName: fileName,
+          guardarComo: guardarComo,
+        );
+    await refresh();
+    if (guardarComo != null) {
+      ref.invalidate(firmasGuardadasProvider);
+    }
+  }
+
+  Future<void> firmarConGuardada(String firmaId, String firmaGuardadaId) async {
+    await ref.read(checklistInstanciasRepositoryProvider).firmarConGuardada(instanciaId, firmaId, firmaGuardadaId);
+    await refresh();
+  }
+
+  Future<void> borrarFirma(String firmaId) async {
+    await ref.read(checklistInstanciasRepositoryProvider).borrarFirma(instanciaId, firmaId);
     await refresh();
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { ChecklistPlantillasService } from '../checklist-plantillas/checklist-plantillas.service';
@@ -6,6 +6,8 @@ import { CreateInstanciaDto } from './dto/create-instancia.dto';
 import { UpdateInstanciaDto } from './dto/update-instancia.dto';
 import { ResponderItemDto } from './dto/responder-item.dto';
 import { CreateRevisionDto } from './dto/create-revision.dto';
+import { UpdateFirmaDto } from './dto/update-firma.dto';
+import { TipoFirmaDto } from './dto/firmar.dto';
 
 const ORDEN = { orden: 'asc' as const };
 const INCLUDE_ESTRUCTURA = {
@@ -40,14 +42,22 @@ export class ChecklistInstanciasService {
       where: { id },
       include: {
         secciones: INCLUDE_ESTRUCTURA,
+        firmas: { orderBy: ORDEN },
         revisiones: { orderBy: { createdAt: 'asc' } },
       },
     });
     if (!instancia) {
       throw new NotFoundException('Checklist no encontrado');
     }
+    const firmas = await Promise.all(
+      instancia.firmas.map(async (f) => ({
+        ...f,
+        firmaUrl: f.firmaKey ? await this.storage.getPresignedUrl(f.firmaKey) : null,
+      })),
+    );
     return {
       ...instancia,
+      firmas,
       logoEmpresaUrl: instancia.logoEmpresaKey
         ? await this.storage.getPresignedUrl(instancia.logoEmpresaKey)
         : null,
@@ -116,6 +126,16 @@ export class ChecklistInstanciasService {
       }
     }
 
+    if (plantilla.rolesFirma.length > 0) {
+      await this.prisma.checklistInstanciaFirma.createMany({
+        data: plantilla.rolesFirma.map((rol) => ({
+          instanciaId: instancia.id,
+          rolNombre: rol.nombre,
+          orden: rol.orden,
+        })),
+      });
+    }
+
     return this.findOne(instancia.id);
   }
 
@@ -126,9 +146,6 @@ export class ChecklistInstanciasService {
       data: {
         ...dto,
         fecha: dto.fecha ? new Date(dto.fecha) : undefined,
-        preparadoPorFecha: dto.preparadoPorFecha ? new Date(dto.preparadoPorFecha) : undefined,
-        revisadoPorFecha: dto.revisadoPorFecha ? new Date(dto.revisadoPorFecha) : undefined,
-        aprobadoPorFecha: dto.aprobadoPorFecha ? new Date(dto.aprobadoPorFecha) : undefined,
       },
     });
   }
@@ -150,7 +167,86 @@ export class ChecklistInstanciasService {
   async addRevision(instanciaId: string, dto: CreateRevisionDto) {
     await this.findOne(instanciaId);
     await this.prisma.checklistRevisionHistorial.create({
-      data: { instanciaId, ...dto },
+      data: {
+        instanciaId,
+        revision: dto.revision,
+        descripcion: dto.descripcion,
+        aprobaciones: dto.aprobaciones ? JSON.parse(JSON.stringify(dto.aprobaciones)) : undefined,
+      },
+    });
+    return this.findOne(instanciaId);
+  }
+
+  private async findFirma(instanciaId: string, firmaId: string) {
+    const firma = await this.prisma.checklistInstanciaFirma.findFirst({
+      where: { id: firmaId, instanciaId },
+    });
+    if (!firma) {
+      throw new NotFoundException('Firma no encontrada en este checklist');
+    }
+    return firma;
+  }
+
+  async actualizarFirma(instanciaId: string, firmaId: string, dto: UpdateFirmaDto) {
+    await this.findFirma(instanciaId, firmaId);
+    await this.prisma.checklistInstanciaFirma.update({
+      where: { id: firmaId },
+      data: {
+        nombrePersona: dto.nombrePersona,
+        fecha: dto.fecha ? new Date(dto.fecha) : undefined,
+      },
+    });
+    return this.findOne(instanciaId);
+  }
+
+  async firmarConArchivo(
+    instanciaId: string,
+    firmaId: string,
+    tipo: TipoFirmaDto,
+    file: Express.Multer.File,
+    guardarComo: string | undefined,
+    userId: string,
+  ) {
+    await this.findFirma(instanciaId, firmaId);
+    if (!file) {
+      throw new BadRequestException('Falta la imagen de la firma');
+    }
+    const { key } = await this.storage.upload(file, 'firmas');
+
+    await this.prisma.checklistInstanciaFirma.update({
+      where: { id: firmaId },
+      data: { firmaKey: key, firmaTipo: tipo },
+    });
+
+    if (guardarComo?.trim()) {
+      await this.prisma.firmaGuardada.create({
+        data: { userId, etiqueta: guardarComo.trim(), tipo, fileKey: key },
+      });
+    }
+
+    return this.findOne(instanciaId);
+  }
+
+  async firmarConGuardada(instanciaId: string, firmaId: string, firmaGuardadaId: string, userId: string) {
+    await this.findFirma(instanciaId, firmaId);
+    const guardada = await this.prisma.firmaGuardada.findFirst({
+      where: { id: firmaGuardadaId, userId },
+    });
+    if (!guardada) {
+      throw new NotFoundException('Firma guardada no encontrada');
+    }
+    await this.prisma.checklistInstanciaFirma.update({
+      where: { id: firmaId },
+      data: { firmaKey: guardada.fileKey, firmaTipo: guardada.tipo },
+    });
+    return this.findOne(instanciaId);
+  }
+
+  async borrarFirma(instanciaId: string, firmaId: string) {
+    await this.findFirma(instanciaId, firmaId);
+    await this.prisma.checklistInstanciaFirma.update({
+      where: { id: firmaId },
+      data: { firmaKey: null, firmaTipo: null },
     });
     return this.findOne(instanciaId);
   }

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/cta_button.dart';
+import '../../../theme/app_colors.dart';
 import '../models/checklist_instancia.dart';
+import '../models/instancia_firma.dart';
 import '../state/checklist_instancias_provider.dart';
+import 'widgets/firmar_sheet.dart';
 
 class ChecklistMetadataScreen extends ConsumerStatefulWidget {
   const ChecklistMetadataScreen({super.key, required this.instanciaId});
@@ -20,14 +23,8 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
   final _estacion = TextEditingController();
   final _revision = TextEditingController();
   final _comentarios = TextEditingController();
-  final _preparadoPor = TextEditingController();
-  final _revisadoPor = TextEditingController();
-  final _aprobadoPor = TextEditingController();
 
   DateTime? _fecha;
-  DateTime? _preparadoFecha;
-  DateTime? _revisadoFecha;
-  DateTime? _aprobadoFecha;
 
   bool _cargado = false;
   bool _guardando = false;
@@ -41,13 +38,7 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
     _estacion.text = instancia.estacion ?? '';
     _revision.text = instancia.revisionActual;
     _comentarios.text = instancia.comentarios ?? '';
-    _preparadoPor.text = instancia.preparadoPorNombre ?? '';
-    _revisadoPor.text = instancia.revisadoPorNombre ?? '';
-    _aprobadoPor.text = instancia.aprobadoPorNombre ?? '';
     _fecha = instancia.fecha;
-    _preparadoFecha = instancia.preparadoPorFecha;
-    _revisadoFecha = instancia.revisadoPorFecha;
-    _aprobadoFecha = instancia.aprobadoPorFecha;
   }
 
   Future<void> _elegirFecha(DateTime? actual, ValueChanged<DateTime> onPicked) async {
@@ -60,7 +51,9 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
     if (picked != null) onPicked(picked);
   }
 
-  String _fmt(DateTime? d) => d == null ? 'Sin fecha' : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  String _fmt(DateTime? d) => d == null
+      ? 'Sin fecha'
+      : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   Future<void> _guardar() async {
     setState(() => _guardando = true);
@@ -73,12 +66,6 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
         'revisionActual': _revision.text.trim().isEmpty ? 'A' : _revision.text.trim(),
         'comentarios': _comentarios.text.trim(),
         if (_fecha != null) 'fecha': _fecha!.toIso8601String(),
-        if (_preparadoPor.text.trim().isNotEmpty) 'preparadoPorNombre': _preparadoPor.text.trim(),
-        if (_preparadoFecha != null) 'preparadoPorFecha': _preparadoFecha!.toIso8601String(),
-        if (_revisadoPor.text.trim().isNotEmpty) 'revisadoPorNombre': _revisadoPor.text.trim(),
-        if (_revisadoFecha != null) 'revisadoPorFecha': _revisadoFecha!.toIso8601String(),
-        if (_aprobadoPor.text.trim().isNotEmpty) 'aprobadoPorNombre': _aprobadoPor.text.trim(),
-        if (_aprobadoFecha != null) 'aprobadoPorFecha': _aprobadoFecha!.toIso8601String(),
       });
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
@@ -92,17 +79,7 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
 
   @override
   void dispose() {
-    for (final c in [
-      _contrato,
-      _docCliente,
-      _docInterno,
-      _estacion,
-      _revision,
-      _comentarios,
-      _preparadoPor,
-      _revisadoPor,
-      _aprobadoPor,
-    ]) {
+    for (final c in [_contrato, _docCliente, _docInterno, _estacion, _revision, _comentarios]) {
       c.dispose();
     }
     super.dispose();
@@ -149,33 +126,20 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              Text('Preparó / Revisó / Aprobó', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 10),
-              _FirmaRow(
-                label: 'Preparó',
-                nombreController: _preparadoPor,
-                fecha: _preparadoFecha,
-                onFecha: () => _elegirFecha(_preparadoFecha, (d) => setState(() => _preparadoFecha = d)),
-                fechaLabel: _fmt(_preparadoFecha),
+              const SizedBox(height: 28),
+              Text('Firmantes', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Los roles se configuran en la plantilla. Firmar es opcional.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
-              _FirmaRow(
-                label: 'Revisó',
-                nombreController: _revisadoPor,
-                fecha: _revisadoFecha,
-                onFecha: () => _elegirFecha(_revisadoFecha, (d) => setState(() => _revisadoFecha = d)),
-                fechaLabel: _fmt(_revisadoFecha),
-              ),
-              const SizedBox(height: 12),
-              _FirmaRow(
-                label: 'Aprobó',
-                nombreController: _aprobadoPor,
-                fecha: _aprobadoFecha,
-                onFecha: () => _elegirFecha(_aprobadoFecha, (d) => setState(() => _aprobadoFecha = d)),
-                fechaLabel: _fmt(_aprobadoFecha),
-              ),
-              const SizedBox(height: 24),
+              for (final firma in instancia.firmas)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _FirmanteCard(instanciaId: widget.instanciaId, firma: firma),
+                ),
+              const SizedBox(height: 16),
               Text('Comentarios generales', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 10),
               TextField(
@@ -198,33 +162,164 @@ class _ChecklistMetadataScreenState extends ConsumerState<ChecklistMetadataScree
   }
 }
 
-class _FirmaRow extends StatelessWidget {
-  const _FirmaRow({
-    required this.label,
-    required this.nombreController,
-    required this.fecha,
-    required this.onFecha,
-    required this.fechaLabel,
-  });
+class _FirmanteCard extends ConsumerStatefulWidget {
+  const _FirmanteCard({required this.instanciaId, required this.firma});
 
-  final String label;
-  final TextEditingController nombreController;
-  final DateTime? fecha;
-  final VoidCallback onFecha;
-  final String fechaLabel;
+  final String instanciaId;
+  final InstanciaFirma firma;
+
+  @override
+  ConsumerState<_FirmanteCard> createState() => _FirmanteCardState();
+}
+
+class _FirmanteCardState extends ConsumerState<_FirmanteCard> {
+  late final TextEditingController _nombre = TextEditingController(text: widget.firma.nombrePersona ?? '');
+  late final FocusNode _focusNode = FocusNode()..addListener(_onFocusChange);
+  bool _procesando = false;
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) _guardarNombre();
+  }
+
+  Future<void> _guardarNombre() async {
+    if (_nombre.text.trim() == (widget.firma.nombrePersona ?? '')) return;
+    await ref
+        .read(checklistInstanciaDetalleProvider(widget.instanciaId).notifier)
+        .actualizarFirma(widget.firma.id, nombrePersona: _nombre.text.trim());
+  }
+
+  Future<void> _elegirFecha() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: widget.firma.fecha ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    await ref
+        .read(checklistInstanciaDetalleProvider(widget.instanciaId).notifier)
+        .actualizarFirma(widget.firma.id, fecha: picked.toIso8601String());
+  }
+
+  Future<void> _firmar() async {
+    final resultado = await mostrarFirmarSheet(context);
+    if (resultado == null) return;
+    setState(() => _procesando = true);
+    try {
+      final notifier = ref.read(checklistInstanciaDetalleProvider(widget.instanciaId).notifier);
+      switch (resultado) {
+        case FirmarConImagen r:
+          await notifier.firmarConArchivo(
+            widget.firma.id,
+            tipo: r.tipo,
+            bytes: r.bytes,
+            fileName: r.fileName,
+            guardarComo: r.guardarComo,
+          );
+        case FirmarConGuardada r:
+          await notifier.firmarConGuardada(widget.firma.id, r.firmaGuardadaId);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo guardar la firma')));
+      }
+    } finally {
+      if (mounted) setState(() => _procesando = false);
+    }
+  }
+
+  Future<void> _quitarFirma() async {
+    setState(() => _procesando = true);
+    try {
+      await ref.read(checklistInstanciaDetalleProvider(widget.instanciaId).notifier).borrarFirma(widget.firma.id);
+    } finally {
+      if (mounted) setState(() => _procesando = false);
+    }
+  }
+
+  String _fmt(DateTime? d) => d == null
+      ? 'Sin fecha'
+      : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _nombre.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 70, child: Text(label, style: Theme.of(context).textTheme.bodyMedium)),
-        Expanded(
-          child: TextField(controller: nombreController, decoration: const InputDecoration(hintText: 'Nombre')),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.firma.rolNombre, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nombre,
+                    focusNode: _focusNode,
+                    decoration: const InputDecoration(hintText: 'Nombre'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(onPressed: _elegirFecha, child: Text(_fmt(widget.firma.fecha))),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (_procesando)
+              const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+            else if (widget.firma.firmado) ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Image.network(widget.firma.firmaUrl!, height: 60, fit: BoxFit.contain),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _firmar,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Volver a firmar'),
+                  ),
+                  TextButton.icon(
+                    onPressed: _quitarFirma,
+                    style: TextButton.styleFrom(foregroundColor: AppColors.fucsia),
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Quitar'),
+                  ),
+                ],
+              ),
+            ] else
+              OutlinedButton.icon(
+                onPressed: _firmar,
+                icon: const Icon(Icons.draw_outlined, color: AppColors.violetPrimary),
+                label: const Text('Firmar'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 44),
+                  side: const BorderSide(color: AppColors.violetPrimary),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onFecha, child: Text(fechaLabel)),
-      ],
+      ),
     );
   }
 }

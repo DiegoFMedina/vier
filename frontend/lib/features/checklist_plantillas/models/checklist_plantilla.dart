@@ -1,4 +1,5 @@
 import 'plantilla_seccion.dart';
+import 'rol_firma.dart';
 
 class ChecklistPlantilla {
   const ChecklistPlantilla({
@@ -12,6 +13,7 @@ class ChecklistPlantilla {
     this.totalSecciones = 0,
     this.totalInstancias = 0,
     this.secciones = const [],
+    this.rolesFirma = const [],
   });
 
   final String id;
@@ -24,6 +26,7 @@ class ChecklistPlantilla {
   final int totalSecciones;
   final int totalInstancias;
   final List<PlantillaSeccion> secciones;
+  final List<RolFirma> rolesFirma;
 
   factory ChecklistPlantilla.fromJson(Map<String, dynamic> json) => ChecklistPlantilla(
         id: json['id'] as String,
@@ -37,6 +40,10 @@ class ChecklistPlantilla {
         totalInstancias: (json['_count']?['instancias'] as int?) ?? 0,
         secciones: (json['secciones'] as List<dynamic>?)
                 ?.map((e) => PlantillaSeccion.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        rolesFirma: (json['rolesFirma'] as List<dynamic>?)
+                ?.map((e) => RolFirma.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             const [],
       );

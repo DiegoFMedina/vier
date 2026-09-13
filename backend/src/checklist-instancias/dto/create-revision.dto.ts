@@ -1,4 +1,15 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
+
+export class AprobacionRevisionDto {
+  @IsString()
+  @MinLength(1)
+  rol: string;
+
+  @IsOptional()
+  @IsString()
+  valor?: string;
+}
 
 export class CreateRevisionDto {
   @IsString()
@@ -10,14 +21,8 @@ export class CreateRevisionDto {
   descripcion: string;
 
   @IsOptional()
-  @IsString()
-  aprobacionGerenciaGeneral?: string;
-
-  @IsOptional()
-  @IsString()
-  aprobacionDeptoIngenieria?: string;
-
-  @IsOptional()
-  @IsString()
-  aprobacionClienteJefeProyecto?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AprobacionRevisionDto)
+  aprobaciones?: AprobacionRevisionDto[];
 }

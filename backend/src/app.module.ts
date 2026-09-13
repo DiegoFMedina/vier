@@ -8,6 +8,7 @@ import { LevantamientosModule } from './levantamientos/levantamientos.module';
 import { CapturasModule } from './capturas/capturas.module';
 import { ChecklistPlantillasModule } from './checklist-plantillas/checklist-plantillas.module';
 import { ChecklistInstanciasModule } from './checklist-instancias/checklist-instancias.module';
+import { FirmasModule } from './firmas/firmas.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ChecklistInstanciasModule } from './checklist-instancias/checklist-inst
     CapturasModule,
     ChecklistPlantillasModule,
     ChecklistInstanciasModule,
+    FirmasModule,
   ],
   controllers: [AppController],
   providers: [AppService],

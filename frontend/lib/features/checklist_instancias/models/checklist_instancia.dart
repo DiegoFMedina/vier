@@ -1,3 +1,4 @@
+import 'instancia_firma.dart';
 import 'instancia_seccion.dart';
 import 'revision_historial.dart';
 
@@ -52,14 +53,9 @@ class ChecklistInstancia {
     this.estacion,
     this.revisionActual = 'A',
     this.fecha,
-    this.preparadoPorNombre,
-    this.preparadoPorFecha,
-    this.revisadoPorNombre,
-    this.revisadoPorFecha,
-    this.aprobadoPorNombre,
-    this.aprobadoPorFecha,
     this.comentarios,
     this.secciones = const [],
+    this.firmas = const [],
     this.revisiones = const [],
   });
 
@@ -75,14 +71,9 @@ class ChecklistInstancia {
   final String? estacion;
   final String revisionActual;
   final DateTime? fecha;
-  final String? preparadoPorNombre;
-  final DateTime? preparadoPorFecha;
-  final String? revisadoPorNombre;
-  final DateTime? revisadoPorFecha;
-  final String? aprobadoPorNombre;
-  final DateTime? aprobadoPorFecha;
   final String? comentarios;
   final List<InstanciaSeccion> secciones;
+  final List<InstanciaFirma> firmas;
   final List<RevisionHistorial> revisiones;
 
   int get totalItems => secciones.fold(0, (sum, s) => sum + s.total);
@@ -103,15 +94,13 @@ class ChecklistInstancia {
         estacion: json['estacion'] as String?,
         revisionActual: json['revisionActual'] as String? ?? 'A',
         fecha: _fecha(json['fecha']),
-        preparadoPorNombre: json['preparadoPorNombre'] as String?,
-        preparadoPorFecha: _fecha(json['preparadoPorFecha']),
-        revisadoPorNombre: json['revisadoPorNombre'] as String?,
-        revisadoPorFecha: _fecha(json['revisadoPorFecha']),
-        aprobadoPorNombre: json['aprobadoPorNombre'] as String?,
-        aprobadoPorFecha: _fecha(json['aprobadoPorFecha']),
         comentarios: json['comentarios'] as String?,
         secciones: (json['secciones'] as List<dynamic>?)
                 ?.map((e) => InstanciaSeccion.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        firmas: (json['firmas'] as List<dynamic>?)
+                ?.map((e) => InstanciaFirma.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             const [],
         revisiones: (json['revisiones'] as List<dynamic>?)

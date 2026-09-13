@@ -30,6 +30,11 @@ enum ChecklistEstado {
   APROBADO
 }
 
+enum TipoFirma {
+  DIBUJADA
+  FOTO
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -43,8 +48,24 @@ model User {
   capturas            Captura[]
   checklistPlantillas ChecklistPlantilla[] @relation("PlantillaCreadaPor")
   checklistInstancias ChecklistInstancia[] @relation("InstanciaCreadaPor")
+  firmasGuardadas     FirmaGuardada[]
 
   @@map("users")
+}
+
+/// Firma personal guardada por un usuario para reutilizarla al firmar
+/// documentos, sin tener que volver a dibujarla o subir la foto cada vez.
+model FirmaGuardada {
+  id        String    @id @default(uuid())
+  etiqueta  String
+  tipo      TipoFirma
+  fileKey   String
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("firmas_guardadas")
 }
 
 model Levantamiento {
@@ -106,9 +127,24 @@ model ChecklistPlantilla {
   creadoPor   User   @relation("PlantillaCreadaPor", fields: [creadoPorId], references: [id])
 
   secciones  ChecklistPlantillaSeccion[]
+  rolesFirma ChecklistPlantillaRolFirma[]
   instancias ChecklistInstancia[]
 
   @@map("checklist_plantillas")
+}
+
+/// Rol de aprobación configurable (ej. "Preparó", "Revisó", "Jefe de
+/// Proyecto"). Reemplaza los 3 campos fijos que traía el documento original,
+/// para poder adaptarse a organigramas distintos por cliente/proyecto.
+model ChecklistPlantillaRolFirma {
+  id     String @id @default(uuid())
+  nombre String
+  orden  Int
+
+  plantillaId String
+  plantilla   ChecklistPlantilla @relation(fields: [plantillaId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_plantilla_roles_firma")
 }
 
 model ChecklistPlantillaSeccion {
@@ -168,13 +204,6 @@ model ChecklistInstancia {
   revisionActual         String    @default("A")
   fecha                  DateTime?
 
-  preparadoPorNombre String?
-  preparadoPorFecha  DateTime?
-  revisadoPorNombre  String?
-  revisadoPorFecha   DateTime?
-  aprobadoPorNombre  String?
-  aprobadoPorFecha   DateTime?
-
   comentarios String?
 
   createdAt DateTime @default(now())
@@ -190,9 +219,29 @@ model ChecklistInstancia {
   creadoPor   User   @relation("InstanciaCreadaPor", fields: [creadoPorId], references: [id])
 
   secciones  ChecklistInstanciaSeccion[]
+  firmas     ChecklistInstanciaFirma[]
   revisiones ChecklistRevisionHistorial[]
 
   @@map("checklist_instancias")
+}
+
+/// Firma de un rol de aprobación para esta instancia (copiada del rol de la
+/// plantilla al crearla). La firma en sí (fileKey) es opcional: si no se ha
+/// firmado, se deja en blanco igual que la línea "Firma" del documento
+/// original.
+model ChecklistInstanciaFirma {
+  id            String     @id @default(uuid())
+  rolNombre     String
+  orden         Int
+  nombrePersona String?
+  fecha         DateTime?
+  firmaKey      String?
+  firmaTipo     TipoFirma?
+
+  instanciaId String
+  instancia   ChecklistInstancia @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_instancia_firmas")
 }
 
 model ChecklistInstanciaSeccion {
@@ -246,9 +295,10 @@ model ChecklistRevisionHistorial {
   descripcion String
   createdAt   DateTime @default(now())
 
-  aprobacionGerenciaGeneral     String?
-  aprobacionDeptoIngenieria     String?
-  aprobacionClienteJefeProyecto String?
+  /// Lista de aprobaciones de esta revisión: [{ "rol": "Gerencia General",
+  /// "valor": "J.M. 10/07/2025" }, ...]. Se guarda como JSON (en vez de
+  /// columnas fijas) porque los roles son configurables por plantilla.
+  aprobaciones Json?
 
   instanciaId String
   instancia   ChecklistInstancia @relation(fields: [instanciaId], references: [id], onDelete: Cascade)

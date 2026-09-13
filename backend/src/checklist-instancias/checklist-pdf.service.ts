@@ -25,12 +25,22 @@ type SeccionDetalle = {
   grupos: GrupoDetalle[];
 };
 
+type FirmaDetalle = {
+  rolNombre: string;
+  orden: number;
+  nombrePersona: string | null;
+  fecha: Date | string | null;
+  firmaKey: string | null;
+  /** Se sobrescribe con un data URI antes de renderizar. */
+  firmaUrl?: string | null;
+};
+
+type AprobacionRevision = { rol: string; valor?: string | null };
+
 type RevisionDetalle = {
   revision: string;
   descripcion: string;
-  aprobacionGerenciaGeneral: string | null;
-  aprobacionDeptoIngenieria: string | null;
-  aprobacionClienteJefeProyecto: string | null;
+  aprobaciones: AprobacionRevision[] | null;
 };
 
 export type ChecklistInstanciaDetalle = LogoUrls & {
@@ -41,14 +51,9 @@ export type ChecklistInstanciaDetalle = LogoUrls & {
   numeroDocumentoInterno: string | null;
   revisionActual: string;
   fecha: Date | string | null;
-  preparadoPorNombre: string | null;
-  preparadoPorFecha: Date | string | null;
-  revisadoPorNombre: string | null;
-  revisadoPorFecha: Date | string | null;
-  aprobadoPorNombre: string | null;
-  aprobadoPorFecha: Date | string | null;
   comentarios: string | null;
   secciones: SeccionDetalle[];
+  firmas: FirmaDetalle[];
   revisiones: RevisionDetalle[];
 };
 
@@ -59,7 +64,7 @@ const AZUL_CLARO = '#DCE7F1';
 export class ChecklistPdfService {
   constructor(private readonly storage: StorageService) {}
 
-  private async toDataUri(key: string | null): Promise<string | null> {
+  private async toDataUri(key: string | null | undefined): Promise<string | null> {
     if (!key) return null;
     const ext = key.split('.').pop()?.toLowerCase();
     const mime = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg';
@@ -72,15 +77,18 @@ export class ChecklistPdfService {
   }
 
   async generar(instancia: ChecklistInstanciaDetalle): Promise<Buffer> {
-    // Los logos se incrustan como data URI: Puppeteer corre dentro del
-    // contenedor del backend y no puede resolver el endpoint público de
+    // Los logos y firmas se incrustan como data URI: Puppeteer corre dentro
+    // del contenedor del backend y no puede resolver el endpoint público de
     // MinIO (pensado para el navegador), así que una <img src="URL firmada">
     // no cargaría ahí.
-    const [logoEmpresaUrl, logoClienteUrl] = await Promise.all([
+    const [logoEmpresaUrl, logoClienteUrl, firmas] = await Promise.all([
       this.toDataUri(instancia.logoEmpresaKey),
       this.toDataUri(instancia.logoClienteKey),
+      Promise.all(
+        instancia.firmas.map(async (f) => ({ ...f, firmaUrl: await this.toDataUri(f.firmaKey) })),
+      ),
     ]);
-    const html = this.renderHtml({ ...instancia, logoEmpresaUrl, logoClienteUrl });
+    const html = this.renderHtml({ ...instancia, logoEmpresaUrl, logoClienteUrl, firmas });
     const browser = await puppeteer.launch({
       headless: true,
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
@@ -169,6 +177,48 @@ export class ChecklistPdfService {
       </table>`;
   }
 
+  private renderFirmaCelda(f: FirmaDetalle): string {
+    const imagen = f.firmaUrl
+      ? `<img src="${f.firmaUrl}" class="firma-img" />`
+      : `<div class="firma-linea"></div>`;
+    return `
+      <td>
+        <div class="firma-nombre">${this.esc(f.nombrePersona) || '&nbsp;'}</div>
+        <div class="firma-fecha">${this.fecha(f.fecha)}</div>
+        ${imagen}
+      </td>`;
+  }
+
+  private renderRevisiones(i: ChecklistInstanciaDetalle): string {
+    const roles = i.firmas.map((f) => f.rolNombre);
+    if (roles.length === 0) {
+      return '';
+    }
+    const filas = i.revisiones.length
+      ? i.revisiones
+          .map((r) => {
+            const celdas = roles
+              .map((rol) => {
+                const aprobacion = r.aprobaciones?.find((a) => a.rol === rol);
+                return `<td>${this.esc(aprobacion?.valor)}</td>`;
+              })
+              .join('');
+            return `<tr><td>${this.esc(r.revision)}</td><td>${this.esc(r.descripcion)}</td>${celdas}</tr>`;
+          })
+          .join('')
+      : `<tr><td colspan="${2 + roles.length}">&nbsp;</td></tr>`;
+
+    return `
+    <table class="revisiones">
+      <tr>
+        <th>REV N°</th>
+        <th>DESCRIPCIÓN</th>
+        ${roles.map((r) => `<th>${this.esc(r)}</th>`).join('')}
+      </tr>
+      ${filas}
+    </table>`;
+  }
+
   private renderHtml(i: ChecklistInstanciaDetalle): string {
     const logoEmpresa = i.logoEmpresaUrl
       ? `<img src="${i.logoEmpresaUrl}" class="logo-empresa" />`
@@ -177,20 +227,7 @@ export class ChecklistPdfService {
       ? `<img src="${i.logoClienteUrl}" class="logo-cliente" />`
       : '';
 
-    const revisionesRows = i.revisiones.length
-      ? i.revisiones
-          .map(
-            (r) => `
-        <tr>
-          <td>${this.esc(r.revision)}</td>
-          <td>${this.esc(r.descripcion)}</td>
-          <td>${this.esc(r.aprobacionGerenciaGeneral)}</td>
-          <td>${this.esc(r.aprobacionDeptoIngenieria)}</td>
-          <td>${this.esc(r.aprobacionClienteJefeProyecto)}</td>
-        </tr>`,
-          )
-          .join('')
-      : '<tr><td colspan="5">&nbsp;</td></tr>';
+    const firmasOrdenadas = [...i.firmas].sort((a, b) => a.orden - b.orden);
 
     return `<!doctype html>
 <html>
@@ -212,9 +249,13 @@ export class ChecklistPdfService {
   .info-contrato { text-align: left; font-size: 12px; line-height: 1.8; }
   .info-contrato b { color: ${AZUL}; }
   .page-break { page-break-before: always; }
-  table.aprobacion { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-  table.aprobacion th, table.aprobacion td { border: 1px solid #999; padding: 8px; text-align: center; font-size: 11px; }
+  table.aprobacion { width: 100%; border-collapse: collapse; margin-bottom: 24px; table-layout: fixed; }
+  table.aprobacion th, table.aprobacion td { border: 1px solid #999; padding: 8px; text-align: center; font-size: 11px; vertical-align: top; }
   table.aprobacion th { background: ${AZUL_CLARO}; }
+  .firma-nombre { font-weight: bold; min-height: 14px; }
+  .firma-fecha { color: #555; font-size: 10px; margin-bottom: 6px; }
+  .firma-linea { border-bottom: 1px solid #999; height: 36px; margin-top: 4px; }
+  .firma-img { max-height: 40px; max-width: 100%; margin-top: 2px; }
   table.revisiones { width: 100%; border-collapse: collapse; }
   table.revisiones th, table.revisiones td { border: 1px solid #999; padding: 6px; font-size: 10px; text-align: center; }
   table.revisiones th { background: ${AZUL}; color: white; }
@@ -252,33 +293,15 @@ export class ChecklistPdfService {
 
   <section class="page-break">
     <h2>Anexo 1 · Check list · ${this.esc(i.estacion)}</h2>
-    <table class="aprobacion">
-      <tr>
-        <th>PREPARÓ</th>
-        <th>REVISÓ</th>
-        <th>APROBÓ</th>
-      </tr>
-      <tr>
-        <td>${this.esc(i.preparadoPorNombre)}<br/>${this.fecha(i.preparadoPorFecha)}</td>
-        <td>${this.esc(i.revisadoPorNombre)}<br/>${this.fecha(i.revisadoPorFecha)}</td>
-        <td>${this.esc(i.aprobadoPorNombre)}<br/>${this.fecha(i.aprobadoPorFecha)}</td>
-      </tr>
-    </table>
-
-    <table class="revisiones">
-      <tr>
-        <th rowspan="2">REV N°</th>
-        <th rowspan="2">DESCRIPCIÓN</th>
-        <th colspan="2">APROBACIÓN ALTASISTEMAS</th>
-        <th>APROBACIÓN CLIENTE</th>
-      </tr>
-      <tr>
-        <th>Gerencia General</th>
-        <th>Depto. Ingeniería</th>
-        <th>Jefe Proyecto</th>
-      </tr>
-      ${revisionesRows}
-    </table>
+    ${
+      firmasOrdenadas.length
+        ? `<table class="aprobacion">
+      <tr>${firmasOrdenadas.map((f) => `<th>${this.esc(f.rolNombre).toUpperCase()}</th>`).join('')}</tr>
+      <tr>${firmasOrdenadas.map((f) => this.renderFirmaCelda(f)).join('')}</tr>
+    </table>`
+        : ''
+    }
+    ${this.renderRevisiones(i)}
   </section>
 
   <section class="page-break">
