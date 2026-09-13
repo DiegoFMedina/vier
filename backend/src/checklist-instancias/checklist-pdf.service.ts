@@ -254,8 +254,8 @@ export class ChecklistPdfService {
   table.aprobacion th { background: ${AZUL_CLARO}; }
   .firma-nombre { font-weight: bold; min-height: 14px; }
   .firma-fecha { color: #555; font-size: 10px; margin-bottom: 6px; }
-  .firma-linea { border: 1px solid #999; border-radius: 6px; height: 64px; margin-top: 6px; }
-  .firma-img-wrap { height: 64px; margin-top: 6px; border: 1px solid #999; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .firma-linea { border-bottom: 1px solid #999; height: 64px; margin-top: 6px; }
+  .firma-img-wrap { height: 64px; margin-top: 6px; border-bottom: 1px solid #999; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
   .firma-img { max-height: 56px; max-width: 90%; object-fit: contain; }
   table.revisiones { width: 100%; border-collapse: collapse; }
   table.revisiones th, table.revisiones td { border: 1px solid #999; padding: 6px; font-size: 10px; text-align: center; }
