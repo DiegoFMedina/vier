@@ -73,6 +73,21 @@ export class StorageService implements OnModuleInit {
     return this.publicClient.presignedGetObject(this.bucket, key, expirySeconds);
   }
 
+  /**
+   * Descarga el objeto completo usando el cliente interno (alcanzable dentro
+   * de la red de Docker). Se usa para incrustar imágenes (ej. logos) como
+   * data URI al generar PDFs con Puppeteer, que corre en el mismo contenedor
+   * del backend y no puede resolver el endpoint público de MinIO.
+   */
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const stream = await this.client.getObject(this.bucket, key);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk as Buffer);
+    }
+    return Buffer.concat(chunks);
+  }
+
   async remove(key: string): Promise<void> {
     await this.client.removeObject(this.bucket, key);
   }

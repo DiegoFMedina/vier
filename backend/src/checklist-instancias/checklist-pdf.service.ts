@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import puppeteer from 'puppeteer';
+import { StorageService } from '../storage/storage.service';
 
-type LogoUrls = { logoEmpresaUrl: string | null; logoClienteUrl: string | null };
+type LogoUrls = {
+  logoEmpresaUrl: string | null;
+  logoClienteUrl: string | null;
+  logoEmpresaKey: string | null;
+  logoClienteKey: string | null;
+};
 
 type ItemDetalle = {
   descripcion: string;
@@ -51,8 +57,30 @@ const AZUL_CLARO = '#DCE7F1';
 
 @Injectable()
 export class ChecklistPdfService {
+  constructor(private readonly storage: StorageService) {}
+
+  private async toDataUri(key: string | null): Promise<string | null> {
+    if (!key) return null;
+    const ext = key.split('.').pop()?.toLowerCase();
+    const mime = ext === 'png' ? 'image/png' : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg';
+    try {
+      const buffer = await this.storage.getObjectBuffer(key);
+      return `data:${mime};base64,${buffer.toString('base64')}`;
+    } catch {
+      return null;
+    }
+  }
+
   async generar(instancia: ChecklistInstanciaDetalle): Promise<Buffer> {
-    const html = this.renderHtml(instancia);
+    // Los logos se incrustan como data URI: Puppeteer corre dentro del
+    // contenedor del backend y no puede resolver el endpoint público de
+    // MinIO (pensado para el navegador), así que una <img src="URL firmada">
+    // no cargaría ahí.
+    const [logoEmpresaUrl, logoClienteUrl] = await Promise.all([
+      this.toDataUri(instancia.logoEmpresaKey),
+      this.toDataUri(instancia.logoClienteKey),
+    ]);
+    const html = this.renderHtml({ ...instancia, logoEmpresaUrl, logoClienteUrl });
     const browser = await puppeteer.launch({
       headless: true,
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
