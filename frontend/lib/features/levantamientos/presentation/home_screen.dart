@@ -164,8 +164,7 @@ class _LevantamientosTab extends ConsumerWidget {
                     final levantamiento = filtered[index];
                     return LevantamientoCard(
                       levantamiento: levantamiento,
-                      onTap: () => context.push('/levantamientos/${levantamiento.id}/capturas',
-                          extra: levantamiento),
+                      onTap: () => context.push('/levantamientos/${levantamiento.id}', extra: levantamiento),
                     );
                   },
                 ),

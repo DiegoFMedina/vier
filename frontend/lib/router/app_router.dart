@@ -12,6 +12,7 @@ import '../features/checklist_plantillas/presentation/checklist_plantilla_builde
 import '../features/checklist_plantillas/presentation/checklist_plantillas_list_screen.dart';
 import '../features/levantamientos/models/levantamiento.dart';
 import '../features/levantamientos/presentation/home_screen.dart';
+import '../features/levantamientos/presentation/levantamiento_hub_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = _AuthRefreshNotifier(ref);
@@ -31,6 +32,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+      GoRoute(
+        path: '/levantamientos/:id',
+        builder: (context, state) => LevantamientoHubScreen(
+          levantamientoId: state.pathParameters['id']!,
+          levantamiento: state.extra as Levantamiento?,
+        ),
+      ),
       GoRoute(
         path: '/levantamientos/:id/capturas',
         builder: (context, state) => CapturaScreen(
