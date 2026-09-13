@@ -76,6 +76,19 @@ flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api
 - **levantamientos**: CRUD del levantamiento inicial en terreno.
 - **capturas**: subida de fotos/documentos por levantamiento, almacenados en
   MinIO; el listado devuelve URLs firmadas de descarga.
+- **checklist-plantillas**: plantillas reutilizables de checklist (secciones →
+  grupos → ítems), editables y con secciones/ítems dinámicos. `PUT
+  /checklist-plantillas/:id/estructura` reemplaza el árbol completo (más simple
+  para un builder que ir campo a campo). Logo de empresa y de cliente
+  configurables por plantilla (`POST /checklist-plantillas/:id/logo`).
+- **checklist-instancias**: al crear un checklist para un levantamiento
+  (`POST /levantamientos/:id/checklists`) se copia la estructura de la
+  plantilla en ese momento (si luego editas la plantilla, los checklists ya
+  creados no cambian). Incluye metadata del documento (contrato, revisión,
+  preparó/revisó/aprobó), historial de revisiones, y respuestas SI/NO +
+  observaciones por ítem (`PATCH /checklists/:id/items/:itemId`). `GET
+  /checklists/:id/pdf` genera el documento en PDF (Puppeteer) replicando el
+  formato de portada/aprobaciones/checklist del documento base.
 
 ## Notas de diseño de la app
 

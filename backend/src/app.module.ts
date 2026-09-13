@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { LevantamientosModule } from './levantamientos/levantamientos.module';
 import { CapturasModule } from './capturas/capturas.module';
+import { ChecklistPlantillasModule } from './checklist-plantillas/checklist-plantillas.module';
+import { ChecklistInstanciasModule } from './checklist-instancias/checklist-instancias.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { CapturasModule } from './capturas/capturas.module';
     AuthModule,
     LevantamientosModule,
     CapturasModule,
+    ChecklistPlantillasModule,
+    ChecklistInstanciasModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -19,6 +19,17 @@ enum LevantamientoEstado {
   COMPLETADO
 }
 
+enum ChecklistRespuesta {
+  SI
+  NO
+}
+
+enum ChecklistEstado {
+  BORRADOR
+  EN_REVISION
+  APROBADO
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -28,8 +39,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  levantamientos Levantamiento[] @relation("CreadoPor")
-  capturas       Captura[]
+  levantamientos      Levantamiento[]      @relation("CreadoPor")
+  capturas            Captura[]
+  checklistPlantillas ChecklistPlantilla[] @relation("PlantillaCreadaPor")
+  checklistInstancias ChecklistInstancia[] @relation("InstanciaCreadaPor")
 
   @@map("users")
 }
@@ -46,22 +59,23 @@ model Levantamiento {
   creadoPorId String
   creadoPor   User   @relation("CreadoPor", fields: [creadoPorId], references: [id])
 
-  capturas Captura[]
+  capturas            Captura[]
+  checklistInstancias ChecklistInstancia[]
 
   @@map("levantamientos")
 }
 
 model Captura {
-  id             String   @id @default(uuid())
-  fileKey        String
-  fileName       String
-  mimeType       String
-  size           Int
-  tipo           String   @default("foto")
-  notas          String?
-  latitud        Float?
-  longitud       Float?
-  createdAt      DateTime @default(now())
+  id        String   @id @default(uuid())
+  fileKey   String
+  fileName  String
+  mimeType  String
+  size      Int
+  tipo      String   @default("foto")
+  notas     String?
+  latitud   Float?
+  longitud  Float?
+  createdAt DateTime @default(now())
 
   levantamientoId String
   levantamiento   Levantamiento @relation(fields: [levantamientoId], references: [id], onDelete: Cascade)
@@ -70,4 +84,174 @@ model Captura {
   subidoPor   User   @relation(fields: [subidoPorId], references: [id])
 
   @@map("capturas")
+}
+
+// ---------------------------------------------------------------------------
+// Checklist: plantilla reutilizable (definida por el líder de proyecto) e
+// instancia (copia congelada de la plantilla al momento de crearla, asociada
+// a un levantamiento, con las respuestas de terreno).
+// ---------------------------------------------------------------------------
+
+model ChecklistPlantilla {
+  id             String   @id @default(uuid())
+  nombre         String
+  descripcion    String?
+  logoEmpresaKey String?
+  logoClienteKey String?
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  creadoPorId String
+  creadoPor   User   @relation("PlantillaCreadaPor", fields: [creadoPorId], references: [id])
+
+  secciones  ChecklistPlantillaSeccion[]
+  instancias ChecklistInstancia[]
+
+  @@map("checklist_plantillas")
+}
+
+model ChecklistPlantillaSeccion {
+  id     String @id @default(uuid())
+  numero Int
+  titulo String
+  orden  Int
+
+  plantillaId String
+  plantilla   ChecklistPlantilla @relation(fields: [plantillaId], references: [id], onDelete: Cascade)
+
+  grupos ChecklistPlantillaGrupo[]
+  items  ChecklistPlantillaItem[]
+
+  @@map("checklist_plantilla_secciones")
+}
+
+model ChecklistPlantillaGrupo {
+  id     String @id @default(uuid())
+  titulo String
+  orden  Int
+
+  seccionId String
+  seccion   ChecklistPlantillaSeccion @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  items ChecklistPlantillaItem[]
+
+  @@map("checklist_plantilla_grupos")
+}
+
+model ChecklistPlantillaItem {
+  id                  String  @id @default(uuid())
+  descripcion         String
+  orden               Int
+  requiereObservacion Boolean @default(true)
+
+  seccionId String
+  seccion   ChecklistPlantillaSeccion @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  grupoId String?
+  grupo   ChecklistPlantillaGrupo? @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_plantilla_items")
+}
+
+model ChecklistInstancia {
+  id             String          @id @default(uuid())
+  nombre         String
+  logoEmpresaKey String?
+  logoClienteKey String?
+  estado         ChecklistEstado @default(BORRADOR)
+
+  contratoNumero         String?
+  numeroDocumentoCliente String?
+  numeroDocumentoInterno String?
+  estacion               String?
+  revisionActual         String    @default("A")
+  fecha                  DateTime?
+
+  preparadoPorNombre String?
+  preparadoPorFecha  DateTime?
+  revisadoPorNombre  String?
+  revisadoPorFecha   DateTime?
+  aprobadoPorNombre  String?
+  aprobadoPorFecha   DateTime?
+
+  comentarios String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  levantamientoId String
+  levantamiento   Levantamiento @relation(fields: [levantamientoId], references: [id], onDelete: Cascade)
+
+  plantillaId String?
+  plantilla   ChecklistPlantilla? @relation(fields: [plantillaId], references: [id], onDelete: SetNull)
+
+  creadoPorId String
+  creadoPor   User   @relation("InstanciaCreadaPor", fields: [creadoPorId], references: [id])
+
+  secciones  ChecklistInstanciaSeccion[]
+  revisiones ChecklistRevisionHistorial[]
+
+  @@map("checklist_instancias")
+}
+
+model ChecklistInstanciaSeccion {
+  id     String @id @default(uuid())
+  numero Int
+  titulo String
+  orden  Int
+
+  instanciaId String
+  instancia   ChecklistInstancia @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
+
+  grupos ChecklistInstanciaGrupo[]
+  items  ChecklistInstanciaItem[]
+
+  @@map("checklist_instancia_secciones")
+}
+
+model ChecklistInstanciaGrupo {
+  id     String @id @default(uuid())
+  titulo String
+  orden  Int
+
+  seccionId String
+  seccion   ChecklistInstanciaSeccion @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  items ChecklistInstanciaItem[]
+
+  @@map("checklist_instancia_grupos")
+}
+
+model ChecklistInstanciaItem {
+  id                  String              @id @default(uuid())
+  descripcion         String
+  orden               Int
+  requiereObservacion Boolean             @default(true)
+  valor               ChecklistRespuesta?
+  observaciones       String?
+
+  seccionId String
+  seccion   ChecklistInstanciaSeccion @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  grupoId String?
+  grupo   ChecklistInstanciaGrupo? @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_instancia_items")
+}
+
+model ChecklistRevisionHistorial {
+  id          String   @id @default(uuid())
+  revision    String
+  descripcion String
+  createdAt   DateTime @default(now())
+
+  aprobacionGerenciaGeneral     String?
+  aprobacionDeptoIngenieria     String?
+  aprobacionClienteJefeProyecto String?
+
+  instanciaId String
+  instancia   ChecklistInstancia @relation(fields: [instanciaId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_revision_historial")
 }

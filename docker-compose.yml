@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vier}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5555:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vier}"]
       interval: 5s
