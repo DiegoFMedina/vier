@@ -28,23 +28,28 @@ class FirmarConGuardada extends FirmarResultado {
   final String firmaGuardadaId;
 }
 
+/// Se abre como pantalla completa (no como bottom sheet): en un bottom sheet
+/// normal, el gesto de arrastre para cerrarlo compite con el gesto de dibujo
+/// de la firma, y en el teléfono la hoja termina subiendo/bajando en vez de
+/// dejar dibujar. A pantalla completa ese conflicto desaparece y además hay
+/// mucho más espacio para firmar con el dedo.
 Future<FirmarResultado?> mostrarFirmarSheet(BuildContext context) {
-  return showModalBottomSheet<FirmarResultado>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => const _FirmarSheet(),
+  return Navigator.of(context).push<FirmarResultado>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (context) => const _FirmarScreen(),
+    ),
   );
 }
 
-class _FirmarSheet extends ConsumerStatefulWidget {
-  const _FirmarSheet();
+class _FirmarScreen extends ConsumerStatefulWidget {
+  const _FirmarScreen();
 
   @override
-  ConsumerState<_FirmarSheet> createState() => _FirmarSheetState();
+  ConsumerState<_FirmarScreen> createState() => _FirmarScreenState();
 }
 
-class _FirmarSheetState extends ConsumerState<_FirmarSheet> {
+class _FirmarScreenState extends ConsumerState<_FirmarScreen> {
   int _tab = 0;
   final _padKey = GlobalKey<SignaturePadState>();
   final _etiquetaController = TextEditingController();
@@ -70,7 +75,9 @@ class _FirmarSheetState extends ConsumerState<_FirmarSheet> {
           bytes: bytes,
           fileName: 'firma-${DateTime.now().millisecondsSinceEpoch}.png',
           tipo: TipoFirma.dibujada,
-          guardarComo: _guardarParaReusar ? (_etiquetaController.text.trim().isEmpty ? 'Mi firma' : _etiquetaController.text.trim()) : null,
+          guardarComo: _guardarParaReusar
+              ? (_etiquetaController.text.trim().isEmpty ? 'Mi firma' : _etiquetaController.text.trim())
+              : null,
         ),
       );
     }
@@ -87,7 +94,9 @@ class _FirmarSheetState extends ConsumerState<_FirmarSheet> {
           bytes: bytes,
           fileName: file.name,
           tipo: TipoFirma.foto,
-          guardarComo: _guardarParaReusar ? (_etiquetaController.text.trim().isEmpty ? 'Mi firma' : _etiquetaController.text.trim()) : null,
+          guardarComo: _guardarParaReusar
+              ? (_etiquetaController.text.trim().isEmpty ? 'Mi firma' : _etiquetaController.text.trim())
+              : null,
         ),
       );
     }
@@ -95,23 +104,20 @@ class _FirmarSheetState extends ConsumerState<_FirmarSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final firmasGuardadasAsync = ref.watch(firmasGuardadasProvider);
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Firmar'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Firmar', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 14),
-            Row(
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Row(
               children: [
                 Expanded(child: _TabButton(label: 'Dibujar', selected: _tab == 0, onTap: () => setState(() => _tab = 0))),
                 const SizedBox(width: 8),
@@ -120,96 +126,120 @@ class _FirmarSheetState extends ConsumerState<_FirmarSheet> {
                 Expanded(child: _TabButton(label: 'Guardadas', selected: _tab == 2, onTap: () => setState(() => _tab = 2))),
               ],
             ),
-            const SizedBox(height: 16),
-            if (_tab == 0) ...[
-              SignaturePad(key: _padKey),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _padKey.currentState?.limpiar(),
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Borrar'),
-                ),
-              ),
-              _GuardarParaReusarField(
-                checked: _guardarParaReusar,
-                onChanged: (v) => setState(() => _guardarParaReusar = v),
-                controller: _etiquetaController,
-              ),
-              const SizedBox(height: 12),
-              CtaButton(label: 'Usar esta firma', icon: Icons.check, onPressed: _confirmarDibujo),
-            ] else if (_tab == 1) ...[
-              Text(
-                'Sube una foto de la firma en papel.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              _GuardarParaReusarField(
-                checked: _guardarParaReusar,
-                onChanged: (v) => setState(() => _guardarParaReusar = v),
-                controller: _etiquetaController,
-              ),
-              const SizedBox(height: 12),
-              CtaButton(label: 'Elegir foto', icon: Icons.photo_camera_outlined, onPressed: _elegirFoto),
-            ] else
-              SizedBox(
-                height: 260,
-                child: firmasGuardadasAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error al cargar firmas guardadas\n$err')),
-                  data: (firmas) {
-                    if (firmas.isEmpty) {
-                      return const Center(child: Text('No tienes firmas guardadas todavía'));
-                    }
-                    return GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 160,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.3,
-                      ),
-                      itemCount: firmas.length,
-                      itemBuilder: (context, index) {
-                        final firma = firmas[index];
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: () => Navigator.of(context).pop(FirmarConGuardada(firma.id)),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: AppColors.border),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Image.network(firma.url, fit: BoxFit.contain),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Text(
-                                    firma.etiqueta,
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: switch (_tab) {
+                0 => _buildDibujarTab(),
+                1 => _buildFotoTab(),
+                _ => _buildGuardadasTab(),
+              },
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildDibujarTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: SignaturePad(key: _padKey)),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => _padKey.currentState?.limpiar(),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Borrar'),
+          ),
+        ),
+        _GuardarParaReusarField(
+          checked: _guardarParaReusar,
+          onChanged: (v) => setState(() => _guardarParaReusar = v),
+          controller: _etiquetaController,
+        ),
+        const SizedBox(height: 12),
+        CtaButton(label: 'Usar esta firma', icon: Icons.check, onPressed: _confirmarDibujo),
+      ],
+    );
+  }
+
+  Widget _buildFotoTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'Sube una foto de la firma en papel.',
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        _GuardarParaReusarField(
+          checked: _guardarParaReusar,
+          onChanged: (v) => setState(() => _guardarParaReusar = v),
+          controller: _etiquetaController,
+        ),
+        const SizedBox(height: 12),
+        CtaButton(label: 'Elegir foto', icon: Icons.photo_camera_outlined, onPressed: _elegirFoto),
+      ],
+    );
+  }
+
+  Widget _buildGuardadasTab() {
+    final firmasGuardadasAsync = ref.watch(firmasGuardadasProvider);
+    return firmasGuardadasAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Error al cargar firmas guardadas\n$err')),
+      data: (firmas) {
+        if (firmas.isEmpty) {
+          return const Center(child: Text('No tienes firmas guardadas todavía'));
+        }
+        return GridView.builder(
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 160,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.3,
+          ),
+          itemCount: firmas.length,
+          itemBuilder: (context, index) {
+            final firma = firmas[index];
+            return InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => Navigator.of(context).pop(FirmarConGuardada(firma.id)),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Image.network(firma.url, fit: BoxFit.contain),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        firma.etiqueta,
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -225,6 +255,7 @@ class _GuardarParaReusarField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,

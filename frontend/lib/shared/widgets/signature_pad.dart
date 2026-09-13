@@ -54,9 +54,7 @@ class SignaturePadState extends State<SignaturePad> {
             behavior: HitTestBehavior.opaque,
             onPanStart: _onPanStart,
             onPanUpdate: _onPanUpdate,
-            child: SizedBox(
-              height: 220,
-              width: double.infinity,
+            child: SizedBox.expand(
               child: CustomPaint(painter: _TrazoPainter(_trazos)),
             ),
           ),
