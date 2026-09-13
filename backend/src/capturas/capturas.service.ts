@@ -38,16 +38,16 @@ export class CapturasService {
       throw new NotFoundException('Levantamiento no encontrado');
     }
 
-    const { key } = await this.storage.upload(file);
-    const tipo = file.mimetype.startsWith('image/') ? 'foto' : 'documento';
+    const { key, mimetype, originalname, size } = await this.storage.upload(file);
+    const tipo = mimetype.startsWith('image/') ? 'foto' : 'documento';
 
     return this.prisma.captura.create({
       data: {
         levantamientoId,
         fileKey: key,
-        fileName: file.originalname,
-        mimeType: file.mimetype,
-        size: file.size,
+        fileName: originalname,
+        mimeType: mimetype,
+        size,
         tipo,
         notas: dto.notas,
         latitud: dto.latitud,

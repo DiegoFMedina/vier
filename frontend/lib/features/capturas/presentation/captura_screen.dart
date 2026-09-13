@@ -30,7 +30,9 @@ class _CapturaScreenState extends ConsumerState<CapturaScreen> {
   Future<void> _capturar(ImageSource source) async {
     try {
       final picker = ImagePicker();
-      final file = await picker.pickImage(source: source, imageQuality: 85);
+      // Calidad alta: son fotos de evidencia técnica (etiquetas, cableado,
+      // equipos), conviene priorizar detalle sobre tamaño de archivo.
+      final file = await picker.pickImage(source: source, imageQuality: 95);
       if (file == null) return;
       final bytes = await file.readAsBytes();
       await _confirmarYSubir(bytes: bytes, fileName: file.name, mimeType: file.mimeType ?? 'image/jpeg');

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
 import { randomUUID } from 'crypto';
+import sharp from 'sharp';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -60,13 +61,55 @@ export class StorageService implements OnModuleInit {
     }
   }
 
-  async upload(file: Express.Multer.File, prefix = 'capturas'): Promise<{ key: string }> {
-    const ext = file.originalname.split('.').pop();
+  async upload(
+    file: Express.Multer.File,
+    prefix = 'capturas',
+  ): Promise<{ key: string; mimetype: string; originalname: string; size: number }> {
+    const normalizado = await this.convertirHeicSiCorresponde(file);
+    const ext = normalizado.originalname.split('.').pop();
     const key = `${prefix}/${randomUUID()}.${ext}`;
-    await this.client.putObject(this.bucket, key, file.buffer, file.size, {
-      'Content-Type': file.mimetype,
+    await this.client.putObject(this.bucket, key, normalizado.buffer, normalizado.buffer.length, {
+      'Content-Type': normalizado.mimetype,
     });
-    return { key };
+    return {
+      key,
+      mimetype: normalizado.mimetype,
+      originalname: normalizado.originalname,
+      size: normalizado.buffer.length,
+    };
+  }
+
+  /**
+   * Las fotos HEIC/HEIF de iPhone se convierten a JPEG para que se puedan
+   * previsualizar en cualquier navegador (la mayoría no soporta HEIC de
+   * forma nativa, a diferencia de Safari) y para incrustarlas más adelante
+   * en documentos generados con Chromium/Puppeteer.
+   *
+   * La mayoría de esas fotos usan el códec HEVC, que no viene incluido en
+   * la build de sharp por restricciones de patente, así que la conversión
+   * puede fallar; en ese caso se guarda el archivo original tal cual en vez
+   * de rechazar la subida.
+   */
+  private async convertirHeicSiCorresponde(file: Express.Multer.File): Promise<Express.Multer.File> {
+    const esHeic = /heic|heif/i.test(file.mimetype) || /\.(heic|heif)$/i.test(file.originalname);
+    if (!esHeic) {
+      return file;
+    }
+
+    try {
+      const buffer = await sharp(file.buffer).jpeg({ quality: 92 }).toBuffer();
+      return {
+        ...file,
+        buffer,
+        size: buffer.length,
+        mimetype: 'image/jpeg',
+        originalname: file.originalname.replace(/\.(heic|heif)$/i, '.jpg'),
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`No se pudo convertir HEIC/HEIF a JPEG, se guarda el original: ${message}`);
+      return file;
+    }
   }
 
   async getPresignedUrl(key: string, expirySeconds = 3600): Promise<string> {
