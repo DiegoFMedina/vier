@@ -3,8 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/env.dart';
 import '../../../core/pdf_viewer_web.dart';
 import '../../../theme/app_colors.dart';
+import '../../auth/state/auth_provider.dart';
 import '../models/instancia_grupo.dart';
 import '../models/instancia_item.dart';
 import '../models/instancia_seccion.dart';
@@ -21,7 +23,6 @@ class ChecklistFillScreen extends ConsumerStatefulWidget {
 
 class _ChecklistFillScreenState extends ConsumerState<ChecklistFillScreen> {
   bool _generandoPdf = false;
-  bool _generandoDocx = false;
 
   Future<void> _verPdf() async {
     setState(() => _generandoPdf = true);
@@ -40,21 +41,10 @@ class _ChecklistFillScreenState extends ConsumerState<ChecklistFillScreen> {
     }
   }
 
-  Future<void> _descargarDocx() async {
-    setState(() => _generandoDocx = true);
-    try {
-      final repo = ref.read(checklistInstanciasRepositoryProvider);
-      final bytes = await repo.descargarDocx(widget.instanciaId);
-      abrirDocxEnNuevaPestana(Uint8List.fromList(bytes), 'checklist-${widget.instanciaId}.docx');
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo generar el documento Word')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _generandoDocx = false);
-    }
+  void _descargarDocx() {
+    final token = ref.read(authNotifierProvider).token;
+    final url = '${Env.apiBaseUrl}/checklists/${widget.instanciaId}/docx?token=$token';
+    abrirUrlEnNuevaPestana(url);
   }
 
   @override
@@ -82,15 +72,9 @@ class _ChecklistFillScreenState extends ConsumerState<ChecklistFillScreen> {
             onPressed: _generandoPdf ? null : _verPdf,
           ),
           IconButton(
-            icon: _generandoDocx
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.description_outlined),
+            icon: const Icon(Icons.description_outlined),
             tooltip: 'Descargar Word',
-            onPressed: _generandoDocx ? null : _descargarDocx,
+            onPressed: _descargarDocx,
           ),
         ],
       ),

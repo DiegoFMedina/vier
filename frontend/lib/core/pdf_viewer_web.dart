@@ -7,11 +7,11 @@ void abrirPdfEnNuevaPestana(Uint8List bytes, String nombreArchivo) {
   html.window.open(url, '_blank');
 }
 
-void abrirDocxEnNuevaPestana(Uint8List bytes, String nombreArchivo) {
-  final blob = html.Blob(
-    [bytes],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  );
-  final url = html.Url.createObjectUrlFromBlob(blob);
+/// Navega directamente a [url] (sin pasar por blob). A diferencia de un PDF,
+/// un .docx no se puede previsualizar dentro del navegador: hace falta que
+/// sea una descarga real (con el Content-Disposition: attachment de la
+/// respuesta) para que Safari en iPhone la reconozca y ofrezca guardarla; un
+/// blob generado desde Dart no dispara ese flujo de forma confiable ahí.
+void abrirUrlEnNuevaPestana(String url) {
   html.window.open(url, '_blank');
 }

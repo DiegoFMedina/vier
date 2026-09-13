@@ -2,10 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { requestHostContext } from './storage/request-host.context';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
+
+  app.use((req: { headers: { host?: string } }, _res: unknown, next: () => void) => {
+    requestHostContext.run({ host: req.headers.host }, next);
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

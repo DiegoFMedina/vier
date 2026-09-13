@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
+import { requestHostContext } from './request-host.context';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -11,12 +12,26 @@ export class StorageService implements OnModuleInit {
   /** Cliente separado usado solo para firmar URLs alcanzables desde el navegador. */
   private readonly publicClient: Client;
   private readonly bucket: string;
+  private readonly accessKey: string;
+  private readonly secretKey: string;
+  private readonly publicPort: number;
+  private readonly publicUseSSL: boolean;
 
   constructor(private readonly config: ConfigService) {
     this.bucket = this.config.get<string>('MINIO_BUCKET', 'vier-capturas');
 
     const accessKey = this.config.get<string>('MINIO_ACCESS_KEY', 'vier');
     const secretKey = this.config.get<string>('MINIO_SECRET_KEY', 'vier12345');
+    this.accessKey = accessKey;
+    this.secretKey = secretKey;
+    this.publicPort = Number(
+      this.config.get('MINIO_PUBLIC_PORT', this.config.get('MINIO_PORT', 9000)),
+    );
+    this.publicUseSSL =
+      this.config.get(
+        'MINIO_PUBLIC_USE_SSL',
+        this.config.get('MINIO_USE_SSL', 'false'),
+      ) === 'true';
 
     this.client = new Client({
       endPoint: this.config.get<string>('MINIO_ENDPOINT', 'localhost'),
@@ -112,8 +127,30 @@ export class StorageService implements OnModuleInit {
     }
   }
 
+  /**
+   * Usa el host con el que el navegador pidió la página actual (ej. la IP de
+   * LAN o el dominio real) para firmar la URL, en vez del host fijo por
+   * variable de entorno: así la galería/descargas funcionan también desde el
+   * teléfono y no solo desde la máquina donde corre Docker.
+   */
+  private publicClientParaRequestActual(): Client {
+    const host = requestHostContext.getStore()?.host;
+    const hostname = host?.split(':')[0];
+    if (!hostname) {
+      return this.publicClient;
+    }
+    return new Client({
+      endPoint: hostname,
+      port: this.publicPort,
+      useSSL: this.publicUseSSL,
+      accessKey: this.accessKey,
+      secretKey: this.secretKey,
+      region: this.config.get<string>('MINIO_REGION', 'us-east-1'),
+    });
+  }
+
   async getPresignedUrl(key: string, expirySeconds = 3600): Promise<string> {
-    return this.publicClient.presignedGetObject(this.bucket, key, expirySeconds);
+    return this.publicClientParaRequestActual().presignedGetObject(this.bucket, key, expirySeconds);
   }
 
   /**
@@ -128,7 +165,7 @@ export class StorageService implements OnModuleInit {
     fileName: string,
     expirySeconds = 3600,
   ): Promise<string> {
-    return this.publicClient.presignedGetObject(this.bucket, key, expirySeconds, {
+    return this.publicClientParaRequestActual().presignedGetObject(this.bucket, key, expirySeconds, {
       'response-content-disposition': `attachment; filename="${fileName.replace(/"/g, '')}"`,
     });
   }
