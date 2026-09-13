@@ -23,6 +23,7 @@ export class StorageService implements OnModuleInit {
       useSSL: this.config.get('MINIO_USE_SSL') === 'true',
       accessKey,
       secretKey,
+      region: this.config.get<string>('MINIO_REGION', 'us-east-1'),
     });
 
     this.publicClient = new Client({
@@ -39,6 +40,10 @@ export class StorageService implements OnModuleInit {
       ) === 'true',
       accessKey,
       secretKey,
+      // Sin esto, el cliente intenta resolver la región llamando al host
+      // configurado (el "endpoint público"), que desde dentro del contenedor
+      // del backend no es alcanzable: firmar la URL fallaría con ECONNREFUSED.
+      region: this.config.get<string>('MINIO_REGION', 'us-east-1'),
     });
   }
 
