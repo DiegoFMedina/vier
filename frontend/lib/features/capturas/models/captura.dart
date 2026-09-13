@@ -6,6 +6,7 @@ class Captura {
     required this.tipo,
     required this.createdAt,
     required this.url,
+    required this.descargaUrl,
     this.notas,
     this.subidoPorNombre,
   });
@@ -16,6 +17,7 @@ class Captura {
   final String tipo;
   final DateTime createdAt;
   final String url;
+  final String descargaUrl;
   final String? notas;
   final String? subidoPorNombre;
 
@@ -28,6 +30,7 @@ class Captura {
         tipo: json['tipo'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         url: json['url'] as String,
+        descargaUrl: json['descargaUrl'] as String? ?? json['url'] as String,
         notas: json['notas'] as String?,
         subidoPorNombre: json['subidoPor']?['nombre'] as String?,
       );

@@ -21,6 +21,7 @@ export class CapturasService {
       capturas.map(async (c) => ({
         ...c,
         url: await this.storage.getPresignedUrl(c.fileKey),
+        descargaUrl: await this.storage.getPresignedDownloadUrl(c.fileKey, c.fileName),
       })),
     );
   }

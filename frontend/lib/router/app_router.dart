@@ -10,6 +10,7 @@ import '../features/checklist_instancias/presentation/checklist_instancias_list_
 import '../features/checklist_instancias/presentation/checklist_metadata_screen.dart';
 import '../features/checklist_plantillas/presentation/checklist_plantilla_builder_screen.dart';
 import '../features/checklist_plantillas/presentation/checklist_plantillas_list_screen.dart';
+import '../features/galeria/presentation/album_screen.dart';
 import '../features/levantamientos/models/levantamiento.dart';
 import '../features/levantamientos/presentation/home_screen.dart';
 import '../features/levantamientos/presentation/levantamiento_hub_screen.dart';
@@ -68,6 +69,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/checklist-plantillas/:id',
         builder: (context, state) => ChecklistPlantillaBuilderScreen(
           plantillaId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/galeria/:id',
+        builder: (context, state) => AlbumScreen(
+          levantamientoId: state.pathParameters['id']!,
+          titulo: state.extra as String?,
         ),
       ),
     ],

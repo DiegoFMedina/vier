@@ -117,6 +117,23 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
+   * URL firmada que fuerza la descarga (Content-Disposition: attachment) con
+   * el nombre de archivo original, en vez de mostrarlo inline en el
+   * navegador. El atributo HTML "download" no funciona para URLs de otro
+   * origen (la de MinIO), así que el nombre de descarga tiene que venir del
+   * propio encabezado de la respuesta firmada.
+   */
+  async getPresignedDownloadUrl(
+    key: string,
+    fileName: string,
+    expirySeconds = 3600,
+  ): Promise<string> {
+    return this.publicClient.presignedGetObject(this.bucket, key, expirySeconds, {
+      'response-content-disposition': `attachment; filename="${fileName.replace(/"/g, '')}"`,
+    });
+  }
+
+  /**
    * Descarga el objeto completo usando el cliente interno (alcanzable dentro
    * de la red de Docker). Se usa para incrustar imágenes (ej. logos) como
    * data URI al generar PDFs con Puppeteer, que corre en el mismo contenedor

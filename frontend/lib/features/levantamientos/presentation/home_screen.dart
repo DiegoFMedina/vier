@@ -5,6 +5,7 @@ import '../../../shared/widgets/flat_illustration.dart';
 import '../../../theme/app_colors.dart';
 import '../../auth/state/auth_models.dart';
 import '../../auth/state/auth_provider.dart';
+import '../../galeria/presentation/galeria_screen.dart';
 import '../models/levantamiento.dart';
 import '../state/levantamientos_provider.dart';
 import 'widgets/levantamiento_card.dart';
@@ -33,14 +34,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Hola, ${auth.user?.nombre.split(' ').first ?? ''}',
-                style: Theme.of(context).textTheme.headlineSmall),
-            Text('Levantamientos en terreno', style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
+        title: _tabIndex == 0
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hola, ${auth.user?.nombre.split(' ').first ?? ''}',
+                      style: Theme.of(context).textTheme.headlineSmall),
+                  Text('Levantamientos en terreno', style: Theme.of(context).textTheme.bodySmall),
+                ],
+              )
+            : Text(_tabIndex == 1 ? 'Galería' : 'Perfil', style: Theme.of(context).textTheme.headlineSmall),
         toolbarHeight: 72,
       ),
       body: IndexedStack(
@@ -51,6 +54,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onQueryChanged: (v) => setState(() => _query = v),
             levantamientosAsync: levantamientosAsync,
           ),
+          const GaleriaScreen(),
           _PerfilTab(nombre: auth.user?.nombre, email: auth.user?.email, role: auth.user?.role),
         ],
       ),
@@ -67,6 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: (i) => setState(() => _tabIndex = i),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.grid_view_outlined), label: 'Inicio'),
+          BottomNavigationBarItem(icon: Icon(Icons.photo_library_outlined), label: 'Galería'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
         ],
       ),
