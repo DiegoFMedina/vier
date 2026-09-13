@@ -5,10 +5,11 @@ import { ChecklistPlantillasModule } from '../checklist-plantillas/checklist-pla
 import { ChecklistInstanciasService } from './checklist-instancias.service';
 import { ChecklistInstanciasController } from './checklist-instancias.controller';
 import { ChecklistPdfService } from './checklist-pdf.service';
+import { ChecklistDocxService } from './checklist-docx.service';
 
 @Module({
   imports: [StorageModule, ChecklistPlantillasModule, PassportModule.register({ defaultStrategy: 'jwt' })],
-  providers: [ChecklistInstanciasService, ChecklistPdfService],
+  providers: [ChecklistInstanciasService, ChecklistPdfService, ChecklistDocxService],
   controllers: [ChecklistInstanciasController],
 })
 export class ChecklistInstanciasModule {}

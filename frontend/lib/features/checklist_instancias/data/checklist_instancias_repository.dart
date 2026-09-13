@@ -98,4 +98,12 @@ class ChecklistInstanciasRepository {
     );
     return response.data!;
   }
+
+  Future<List<int>> descargarDocx(String id) async {
+    final response = await _dio.get<List<int>>(
+      '/checklists/$id/docx',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data!;
+  }
 }

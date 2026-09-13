@@ -1,61 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import puppeteer from 'puppeteer';
 import { StorageService } from '../storage/storage.service';
+import type { ChecklistInstanciaDetalle, FirmaDetalle, ItemDetalle, SeccionDetalle } from './checklist-documento.types';
 
-type LogoUrls = {
-  logoEmpresaUrl: string | null;
-  logoClienteUrl: string | null;
-  logoEmpresaKey: string | null;
-  logoClienteKey: string | null;
-};
-
-type ItemDetalle = {
-  descripcion: string;
-  requiereObservacion: boolean;
-  valor: 'SI' | 'NO' | null;
-  observaciones: string | null;
-};
-
-type GrupoDetalle = { titulo: string; items: ItemDetalle[] };
-
-type SeccionDetalle = {
-  numero: number;
-  titulo: string;
-  items: ItemDetalle[];
-  grupos: GrupoDetalle[];
-};
-
-type FirmaDetalle = {
-  rolNombre: string;
-  orden: number;
-  nombrePersona: string | null;
-  fecha: Date | string | null;
-  firmaKey: string | null;
-  /** Se sobrescribe con un data URI antes de renderizar. */
-  firmaUrl?: string | null;
-};
-
-type AprobacionRevision = { rol: string; valor?: string | null };
-
-type RevisionDetalle = {
-  revision: string;
-  descripcion: string;
-  aprobaciones: AprobacionRevision[] | null;
-};
-
-export type ChecklistInstanciaDetalle = LogoUrls & {
-  nombre: string;
-  estacion: string | null;
-  contratoNumero: string | null;
-  numeroDocumentoCliente: string | null;
-  numeroDocumentoInterno: string | null;
-  revisionActual: string;
-  fecha: Date | string | null;
-  comentarios: string | null;
-  secciones: SeccionDetalle[];
-  firmas: FirmaDetalle[];
-  revisiones: RevisionDetalle[];
-};
+export type { ChecklistInstanciaDetalle } from './checklist-documento.types';
 
 const AZUL = '#2E5C8A';
 const AZUL_CLARO = '#DCE7F1';

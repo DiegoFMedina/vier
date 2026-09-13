@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ChecklistInstanciasService } from './checklist-instancias.service';
 import { ChecklistPdfService, ChecklistInstanciaDetalle } from './checklist-pdf.service';
+import { ChecklistDocxService } from './checklist-docx.service';
 import { CreateInstanciaDto } from './dto/create-instancia.dto';
 import { UpdateInstanciaDto } from './dto/update-instancia.dto';
 import { ResponderItemDto } from './dto/responder-item.dto';
@@ -37,6 +38,7 @@ export class ChecklistInstanciasController {
   constructor(
     private readonly service: ChecklistInstanciasService,
     private readonly pdf: ChecklistPdfService,
+    private readonly docx: ChecklistDocxService,
   ) {}
 
   @Get('levantamientos/:levantamientoId/checklists')
@@ -133,6 +135,18 @@ export class ChecklistInstanciasController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="checklist-${id}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  @Get('checklists/:id/docx')
+  async descargarDocx(@Param('id') id: string, @Res() res: Response) {
+    const instancia = await this.service.findOne(id);
+    const buffer = await this.docx.generar(instancia as unknown as ChecklistInstanciaDetalle);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename="checklist-${id}.docx"`,
       'Content-Length': buffer.length,
     });
     res.end(buffer);

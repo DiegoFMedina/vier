@@ -21,6 +21,7 @@ class ChecklistFillScreen extends ConsumerStatefulWidget {
 
 class _ChecklistFillScreenState extends ConsumerState<ChecklistFillScreen> {
   bool _generandoPdf = false;
+  bool _generandoDocx = false;
 
   Future<void> _verPdf() async {
     setState(() => _generandoPdf = true);
@@ -36,6 +37,23 @@ class _ChecklistFillScreenState extends ConsumerState<ChecklistFillScreen> {
       }
     } finally {
       if (mounted) setState(() => _generandoPdf = false);
+    }
+  }
+
+  Future<void> _descargarDocx() async {
+    setState(() => _generandoDocx = true);
+    try {
+      final repo = ref.read(checklistInstanciasRepositoryProvider);
+      final bytes = await repo.descargarDocx(widget.instanciaId);
+      abrirDocxEnNuevaPestana(Uint8List.fromList(bytes), 'checklist-${widget.instanciaId}.docx');
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo generar el documento Word')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generandoDocx = false);
     }
   }
 
@@ -62,6 +80,17 @@ class _ChecklistFillScreenState extends ConsumerState<ChecklistFillScreen> {
                 : const Icon(Icons.picture_as_pdf_outlined),
             tooltip: 'Ver PDF',
             onPressed: _generandoPdf ? null : _verPdf,
+          ),
+          IconButton(
+            icon: _generandoDocx
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.description_outlined),
+            tooltip: 'Descargar Word',
+            onPressed: _generandoDocx ? null : _descargarDocx,
           ),
         ],
       ),
