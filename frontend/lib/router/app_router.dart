@@ -5,6 +5,11 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/state/auth_models.dart';
 import '../features/auth/state/auth_provider.dart';
 import '../features/capturas/presentation/captura_screen.dart';
+import '../features/checklist_instancias/presentation/checklist_fill_screen.dart';
+import '../features/checklist_instancias/presentation/checklist_instancias_list_screen.dart';
+import '../features/checklist_instancias/presentation/checklist_metadata_screen.dart';
+import '../features/checklist_plantillas/presentation/checklist_plantilla_builder_screen.dart';
+import '../features/checklist_plantillas/presentation/checklist_plantillas_list_screen.dart';
 import '../features/levantamientos/models/levantamiento.dart';
 import '../features/levantamientos/presentation/home_screen.dart';
 
@@ -31,6 +36,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => CapturaScreen(
           levantamientoId: state.pathParameters['id']!,
           levantamiento: state.extra as Levantamiento?,
+        ),
+      ),
+      GoRoute(
+        path: '/levantamientos/:id/checklists',
+        builder: (context, state) => ChecklistInstanciasListScreen(
+          levantamientoId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/checklists/:id',
+        builder: (context, state) => ChecklistFillScreen(instanciaId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/checklists/:id/datos',
+        builder: (context, state) => ChecklistMetadataScreen(instanciaId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/checklist-plantillas',
+        builder: (context, state) => const ChecklistPlantillasListScreen(),
+      ),
+      GoRoute(
+        path: '/checklist-plantillas/:id',
+        builder: (context, state) => ChecklistPlantillaBuilderScreen(
+          plantillaId: state.pathParameters['id']!,
         ),
       ),
     ],

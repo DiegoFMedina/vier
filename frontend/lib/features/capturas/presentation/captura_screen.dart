@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../shared/widgets/cta_button.dart';
 import '../../../shared/widgets/flat_illustration.dart';
@@ -111,6 +112,15 @@ class _CapturaScreenState extends ConsumerState<CapturaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.levantamiento?.titulo ?? 'Captura en terreno'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.fact_check_outlined),
+            tooltip: 'Checklists',
+            onPressed: () => context.push(
+              '/levantamientos/${widget.levantamientoId}/checklists',
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [

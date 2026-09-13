@@ -205,6 +205,14 @@ class _PerfilTab extends ConsumerWidget {
           Text(email ?? '', style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
           Text(role ?? '', style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 24),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.fact_check_outlined, color: AppColors.violetPrimary),
+            title: const Text('Plantillas de checklist'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/checklist-plantillas'),
+          ),
           const Spacer(),
           OutlinedButton.icon(
             onPressed: () => ref.read(authNotifierProvider.notifier).logout(),
