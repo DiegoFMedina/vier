@@ -179,7 +179,7 @@ export class ChecklistPdfService {
 
   private renderFirmaCelda(f: FirmaDetalle): string {
     const imagen = f.firmaUrl
-      ? `<img src="${f.firmaUrl}" class="firma-img" />`
+      ? `<div class="firma-img-wrap"><img src="${f.firmaUrl}" class="firma-img" /></div>`
       : `<div class="firma-linea"></div>`;
     return `
       <td>
@@ -254,8 +254,9 @@ export class ChecklistPdfService {
   table.aprobacion th { background: ${AZUL_CLARO}; }
   .firma-nombre { font-weight: bold; min-height: 14px; }
   .firma-fecha { color: #555; font-size: 10px; margin-bottom: 6px; }
-  .firma-linea { border-bottom: 1px solid #999; height: 36px; margin-top: 4px; }
-  .firma-img { max-height: 40px; max-width: 100%; margin-top: 2px; }
+  .firma-linea { border-bottom: 1px solid #999; height: 64px; margin-top: 4px; }
+  .firma-img-wrap { height: 64px; margin-top: 4px; display: flex; align-items: center; justify-content: center; }
+  .firma-img { max-height: 64px; max-width: 100%; object-fit: contain; }
   table.revisiones { width: 100%; border-collapse: collapse; }
   table.revisiones th, table.revisiones td { border: 1px solid #999; padding: 6px; font-size: 10px; text-align: center; }
   table.revisiones th { background: ${AZUL}; color: white; }
