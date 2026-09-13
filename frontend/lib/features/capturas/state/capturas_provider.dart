@@ -24,7 +24,8 @@ class CapturasNotifier extends AsyncNotifier<List<Captura>> {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // Sin pasar por AsyncLoading: así la grilla no desaparece (ni se pierde
+    // el scroll) cada vez que se sube una captura.
     state = await AsyncValue.guard(
       () => ref.read(capturasRepositoryProvider).findByLevantamiento(levantamientoId),
     );

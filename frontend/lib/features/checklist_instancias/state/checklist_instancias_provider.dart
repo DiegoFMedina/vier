@@ -24,7 +24,9 @@ class ChecklistInstanciasPorLevantamientoNotifier
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // No se limpia el estado a AsyncLoading antes de recargar: eso haría
+    // desaparecer la lista (y perder el scroll) mientras llega la respuesta.
+    // Se mantienen los datos previos visibles hasta tener los nuevos.
     state = await AsyncValue.guard(
       () => ref.read(checklistInstanciasRepositoryProvider).findByLevantamiento(levantamientoId),
     );
@@ -58,7 +60,9 @@ class ChecklistInstanciaDetalleNotifier extends AsyncNotifier<ChecklistInstancia
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // Igual que en el notifier de arriba: no se pasa por AsyncLoading para no
+    // reemplazar el formulario/lista de ítems por un spinner (y perder el
+    // scroll) cada vez que se responde un ítem.
     state = await AsyncValue.guard(() => ref.read(checklistInstanciasRepositoryProvider).findOne(instanciaId));
   }
 

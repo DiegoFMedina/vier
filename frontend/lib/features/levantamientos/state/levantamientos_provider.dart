@@ -19,7 +19,8 @@ class LevantamientosNotifier extends AsyncNotifier<List<Levantamiento>> {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // Sin pasar por AsyncLoading: la lista de levantamientos se mantiene
+    // visible (con su scroll) mientras se recarga en segundo plano.
     state = await AsyncValue.guard(() => ref.read(levantamientosRepositoryProvider).findAll());
   }
 

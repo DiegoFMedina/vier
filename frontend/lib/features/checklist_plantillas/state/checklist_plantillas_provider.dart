@@ -20,7 +20,7 @@ class ChecklistPlantillasNotifier extends AsyncNotifier<List<ChecklistPlantilla>
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // Sin pasar por AsyncLoading para no perder el scroll de la lista.
     state = await AsyncValue.guard(() => ref.read(checklistPlantillasRepositoryProvider).findAll());
   }
 
@@ -56,7 +56,8 @@ class ChecklistPlantillaDetalleNotifier extends AsyncNotifier<ChecklistPlantilla
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
+    // Sin pasar por AsyncLoading: el builder mantiene la estructura visible
+    // (con su scroll) mientras se recarga tras guardar/subir un logo.
     state = await AsyncValue.guard(() => ref.read(checklistPlantillasRepositoryProvider).findOne(plantillaId));
   }
 
